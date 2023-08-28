@@ -21,6 +21,14 @@ class UserInformation {
       'situation': situation,
     };
   }
+
+  factory UserInformation.fromJson(Map<String, dynamic> json) {
+    return UserInformation(
+      name: json['name'],
+      birthDate: DateTime.parse(json['birthDate']),
+      situation: json['situation'],
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -44,7 +52,21 @@ class InformationInputPage extends StatefulWidget {
 class _InformationInputPageState extends State<InformationInputPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   UserInformation _userInformation = UserInformation(name: "", birthDate: DateTime.now(), situation: "empreendedor");
+  List<UserInformation> _userInformations = []; // Lista para armazenar todas as informações
   final List<String> _situationOptions = ["empreendedor", "empregado", "estagiário"];
+
+  Future<void> _loadInformation() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath = '${directory.path}/user_information.json';
+    final file = File(filePath);
+
+    if (await file.exists()) {
+      final data = await file.readAsString();
+      final List<dynamic> jsonList = json.decode(data);
+
+      _userInformations = jsonList.map((json) => UserInformation.fromJson(json)).toList();
+    }
+  }
 
   Future<void> _saveInformation() async {
     if (_formKey.currentState!.validate()) {
@@ -54,11 +76,19 @@ class _InformationInputPageState extends State<InformationInputPage> {
       final filePath = '${directory.path}/user_information.json';
       final file = File(filePath);
 
-      final userInformationJson = _userInformation.toJson();
-      await file.writeAsString(json.encode(userInformationJson));
+      _userInformations.add(_userInformation);
+
+      final userInformationJsonList = _userInformations.map((info) => info.toJson()).toList();
+      await file.writeAsString(json.encode(userInformationJsonList));
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Informações salvas com sucesso!')));
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInformation();
   }
 
   @override
