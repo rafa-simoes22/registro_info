@@ -7,18 +7,18 @@ void main() {
   runApp(MyApp());
 }
 
-class UserInfo {
-  String nome;
-  DateTime dataNascimento;
-  String situacao;
+class UserInformation {
+  String name = "";
+  DateTime birthDate;
+  String situation = "";
 
-  UserInfo({required this.nome, required this.dataNascimento, required this.situacao});
+  UserInformation({required this.name, required this.birthDate, required this.situation});
 
   Map<String, dynamic> toJson() {
     return {
-      'nome': nome,
-      'dataNascimento': dataNascimento.toIso8601String(),
-      'situacao': situacao,
+      'name': name,
+      'birthDate': birthDate.toIso8601String(),
+      'situation': situation,
     };
   }
 }
@@ -27,53 +27,37 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'User Info App',
+      title: 'User Information App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: UserInfoPage(),
+      home: InformationInputPage(),
     );
   }
 }
 
-class UserInfoPage extends StatefulWidget {
+class InformationInputPage extends StatefulWidget {
   @override
-  _UserInfoPageState createState() => _UserInfoPageState();
+  _InformationInputPageState createState() => _InformationInputPageState();
 }
 
-class _UserInfoPageState extends State<UserInfoPage> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nomeController;
-  late TextEditingController _dataNascimentoController;
-  String _situacao = "Empreendedor";
+class _InformationInputPageState extends State<InformationInputPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  UserInformation _userInformation = UserInformation(name: "", birthDate: DateTime.now(), situation: "empreendedor");
+  final List<String> _situationOptions = ["empreendedor", "empregado", "estagiário"];
 
-  @override
-  void initState() {
-    super.initState();
-    _nomeController = TextEditingController();
-    _dataNascimentoController = TextEditingController();
-  }
-
-  Future<void> _saveUserInfo(UserInfo userInfo) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/user_info.json');
-    final jsonStr = jsonEncode(userInfo.toJson());
-    await file.writeAsString(jsonStr);
-  }
-
-  void _submitForm() {
+  Future<void> _saveInformation() async {
     if (_formKey.currentState!.validate()) {
-      final userInfo = UserInfo(
-        nome: _nomeController.text,
-        dataNascimento: DateTime.parse(_dataNascimentoController.text),
-        situacao: _situacao,
-      );
-      _saveUserInfo(userInfo);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Informações salvas com sucesso!'),
-        ),
-      );
+      _formKey.currentState!.save();
+
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/user_information.json';
+      final file = File(filePath);
+
+      final userInformationJson = _userInformation.toJson();
+      await file.writeAsString(json.encode(userInformationJson));
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Informações salvas com sucesso!')));
     }
   }
 
@@ -81,7 +65,7 @@ class _UserInfoPageState extends State<UserInfoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('User Info App'),
+        title: Text('User Information'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -89,48 +73,53 @@ class _UserInfoPageState extends State<UserInfoPage> {
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: <Widget>[
               TextFormField(
-                controller: _nomeController,
                 decoration: InputDecoration(labelText: 'Nome'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, insira um nome';
+                    return 'Digite um nome válido';
                   }
                   return null;
                 },
+                onSaved: (value) {
+                  _userInformation.name = value!;
+                },
               ),
+              SizedBox(height: 16.0),
               TextFormField(
-                controller: _dataNascimentoController,
-                decoration: InputDecoration(labelText: 'Data de Nascimento (YYYY-MM-DD)'),
+                decoration: InputDecoration(labelText: 'Data de Nascimento (DD/MM/AAAA)'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, insira uma data de nascimento';
+                    return 'Digite uma data de nascimento válida';
                   }
-                  if (DateTime.tryParse(value) == null) {
-                    return 'Insira uma data válida no formato YYYY-MM-DD';
-                  }
+                  // Implementar validação de data aqui
                   return null;
                 },
+                onSaved: (value) {
+                  // Implementar conversão de texto para DateTime aqui
+                  _userInformation.birthDate = DateTime.now();
+                },
               ),
-              DropdownButton<String>(
-                value: _situacao,
-                onChanged: (newValue) {
+              SizedBox(height: 16.0),
+              DropdownButtonFormField<String>(
+                value: _userInformation.situation,
+                onChanged: (value) {
                   setState(() {
-                    _situacao = newValue!;
+                    _userInformation.situation = value!;
                   });
                 },
-                items: <String>['Empreendedor', 'Empregado', 'Estagiário']
-                    .map<DropdownMenuItem<String>>((String value) {
+                items: _situationOptions.map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
                   );
                 }).toList(),
+                decoration: InputDecoration(labelText: 'Situação'),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 16.0),
               ElevatedButton(
-                onPressed: _submitForm,
+                onPressed: _saveInformation,
                 child: Text('Salvar'),
               ),
             ],
